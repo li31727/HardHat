@@ -13,3 +13,4 @@ npx hardhat ignition deploy ./ignition/modules/Lock.js
 ```
 
 
+note url:[use hardhat deploy contract](https://o8wlphzgl6.feishu.cn/docx/K5Q5d5O6eohPsFxaTSXciXUtnde)
