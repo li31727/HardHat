@@ -1,54 +1,63 @@
-// import ethers.js
-// create main function
-// execute main function
+// import the ethers from hardhat
+// write a main function
+// call the main function
 
-const  { ethers } =require("hardhat")
+const { ethers } = require("hardhat");
 
-async function main(){
-    // 要使用 await 关键字，不然fundMeFactory可能为空值
-    const fundMeFactory =await ethers.getContractFactory("FundMe")
-    const fundMe=fundMeFactory.attach("0x822D637c2c22319d5527141f8A5540f9D8dc1fbE")
+async function main() {
+  const fundMeFacotry = await ethers.getContractFactory("FundMe");
+  console.log("deploiying the contract...");
+  
+  const fundMe = await fundMeFacotry.deploy(10);
+  await fundMe.waitForDeployment();
+  console.log(`contract fundme is deployed successfully at addree ${fundMe.target}`)
+  
+  if(hre.network.config.chainId == 11155111 && process.env.ETHERSCAN_API_KEY) {
+    console.log("wait for 3 confirmations")
+    await fundMe.deploymentTransaction().wait(3)
+    console.log("verifying contract on etherscan...")
+    await verify(fundMe.target, [10])
+  } else {
+    console.log("skipping verification")
+  }
 
-    // - 初始化2个账户
-    const [firstAccount,secondAccount]=await ethers.getSigners()
-    // 查看合约账户信息
-    const firstAccountBalanceOfFundMe = await fundMe.fundersToAmount(firstAccount.address)
-    const secondAccountBalanceOfFundMe = await fundMe.fundersToAmount(secondAccount.address)
-    console.log(`firstAccountBalanceOfFundMe:${firstAccountBalanceOfFundMe}`)
-    console.log(`secondAccountBalanceOfFundMe:${secondAccountBalanceOfFundMe}`)
+  console.log("fund the contract...")
+  const fundTx = await fundMe.fund({
+    value: ethers.parseEther("0.1")
+  })
+  await fundTx.wait()
+  console.log("funded the contract")
 
-   // 查看合约余额
-   const fundMeBalance=  await ethers.provider.getBalance(fundMe.target)
-   console.log(`fundMeBalance:${fundMeBalance}`)
+  const fundMeBalance = await ethers.provider.getBalance(fundMe.target);
+  console.log(`balance of the fundme is ${fundMeBalance}`)
 
-   // 退还
-    const firstAccountBalance=  await ethers.provider.getBalance(firstAccount)
-    console.log(`firstAccountBalance:${firstAccountBalance}`)
-    fundMe.refund()
-    // 直接查看余额可能还没更新需要等待
-    fundMe.deploymentTransaction().wait(2)
-    const firstAccountBalance1=  await ethers.provider.getBalance(firstAccount)
-    console.log(`firstAccountBalance1:${firstAccountBalance1}`)
+  const [firstAccount, secondAccount] = await ethers.getSigners();
+  console.log(`first account address is ${firstAccount.address}`)
+  console.log(`second account address is ${secondAccount.address}`)
 
-    const secondAccountBalance=  await ethers.provider.getBalance(secondAccount)
-    console.log(`secondAccountBalance:${secondAccountBalance}`)
-    fundMe.connect(secondAccount).refund()
-    fundMe.deploymentTransaction().wait(2)
-    const secondAccountBalance1=  await ethers.provider.getBalance(secondAccount)
-    console.log(`secondAccountBalance1:${secondAccountBalance1}`)
+  console.log("fetching the funds of the first account...")
+  const fundsOfFirstAccount = await fundMe.listOfFunders(firstAccount.address);
+  console.log(`Current funds of first account is ${fundsOfFirstAccount}`)
 
+  console.log("fund the contract on behalf of the second account...")
+  const secondFundTx = await fundMe.connect(secondAccount).fund({
+    value: ethers.parseEther("0.1")
+  })
+  await secondFundTx.wait()
 
+  console.log("fetching the funds of the second account...")
+  const fundsOfSecondAccount = await fundMe.listOfFunders(secondAccount.address);
+  console.log(`Current funds of second account is ${fundsOfSecondAccount}`)
 }
 
-async function verifyFundMe(fundMeAddr,args) {
-    await hre.run("verify:verify", {
-        address:fundMeAddr,
-        constructorArguments: args,
-      });
-    
+async function verify(address, args) {
+  await hre.run("verify:verify", {
+    address: address,
+    constructorArguments: args,
+  });
 }
-main().then().catch((error)=>{
-    // 打印错误
-    console.error(error)
-    process.exit(1)
+
+main().then().catch((error) => {
+  console.log(`error is ${error}`)
+  process.exit(1)
 })

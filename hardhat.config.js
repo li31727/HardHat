@@ -1,6 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@chainlink/env-enc").config() // 导入.env.enc配置
 require("./tasks")
+require("hardhat-deploy") // 导入hardhat-deploy
 
 
 // 获取.env文件配置
@@ -15,6 +16,9 @@ ETHERSCAN_KEY =process.env.ETHERSCAN_KEY
 module.exports = {
   solidity: "0.8.28",
   defaultNetwork:"hardhat",
+  mocha:{
+    timeout:300000
+  },
   networks:{
     sepolia:{
       // Alchemy,Infra,QuickNode,需要在其相应网站设置apikey,
@@ -32,4 +36,7 @@ module.exports = {
       sepolia: ETHERSCAN_KEY
     }
   },
+  gasReporter: {
+    enabled: false,
+  }
 };
